@@ -2,17 +2,17 @@ import cv2
 import numpy as np
 
 
-def detect_ball(image, minRadius, maxRadius, line_color=(255, 255, 255), thickness=2):
+def detect_ball(image, line_color=(255, 255, 255), thickness=2):
 
     # Convert image to grayscale
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, image = cv2.threshold(image, 200, 255, cv2.THRESH_BINARY)
+    image_org = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, image_org = cv2.threshold(image_org, 200, 255, cv2.THRESH_BINARY)
 
     # Apply Gaussian blur to reduce noise
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+    blurred_image = cv2.GaussianBlur(image_org, (17, 17), 0)
 
     # Apply Hough Circle Transform
-    circles = cv2.HoughCircles(blurred_image, cv2.HOUGH_GRADIENT, 1, 50, 30, 100, minRadius, maxRadius)
+    circles = cv2.HoughCircles(blurred_image, cv2.HOUGH_GRADIENT, 1.2, 100, 100, 30, 10, 40)
 
     if circles is not None and len(circles) <= 10:
         circles = np.round(circles[0, :]).astype(int)  # Convert circle parameters to integers
