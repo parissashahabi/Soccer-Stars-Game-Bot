@@ -1,18 +1,16 @@
 from pyautogui import *
-# import time
 from time import time
-import pyautogui
 import cv2 as cv
-from green_rect_detection import detect_green_rectangle
-from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images
+from rect_detection import detect_rectangle
+from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, is_player_turn
 from window_capture import WindowCapture
 from object_detection import ObjectDetection
-from detect_and_save_players import detect_and_save_players
-from ball_detection import detect_ball
+from save_element_screenshot import save_players_screenshot
 
 METHODS = ['cv.TM_CCOEFF', 'cv.TM_CCOEFF_NORMED', 'cv.TM_CCORR', 'cv.TM_CCORR_NORMED', 'cv.TM_SQDIFF', 'cv.TM_SQDIFF_NORMED']
 METHOD = METHODS[1]
 WINDOW_NAME = "BlueStacks App Player"
+PLAYER_HANDLE_IMAGE_PATH = "images/paris.jpg"
 
 # list_window_names()
 
@@ -22,9 +20,12 @@ screenshot = wincap.get_screenshot()
 screenshot = pil_to_cv2(trim(cv2_to_pil(screenshot)))
 
 height, width, _ = screenshot.shape
-detect_and_save_players(screenshot, "opponent", width // 2, 0, width // 2, height)
-detect_and_save_players(screenshot, "player", 0, 0, width // 2, height)
-# detect_and_save_players(screenshot, "ball", width // 2 - 25, 0, 55, height)
+save_players_screenshot(screenshot, "opponent", width // 2, 0, width // 2, height)
+save_players_screenshot(screenshot, "player", 0, 0, width // 2, height)
+# save_players_screenshot(screenshot, "ball", width // 2 - 25, 0, 55, height)
+
+# result = filter_image_for_ocr(screenshot, PLAYER_HANDLE_IMAGE_PATH)
+# print("OCR Results:", result['text'])
 
 player_image_path = 'images/player.jpg'
 opponent_image_path = 'images/opponent.jpg'
@@ -37,8 +38,12 @@ obj_detc_player_goal = ObjectDetection('images/player_goal.jpg', METHOD, (255, 2
 obj_detc_ball = ObjectDetection('images/ball.jpg', METHOD, (255, 255, 255))
 
 loop_time = time()
+i = 0
 while True:
     screenshot = wincap.get_screenshot()
+    # if is_player_turn(screenshot, PLAYER_HANDLE_IMAGE_PATH):
+    #     print(i, "Your turn.")
+    #     i += 1
 
     # screenshot = cv.imread('images/soccer stars.png', cv.IMREAD_UNCHANGED)
     # cv.imshow('Computer Vision', screenshot)
@@ -54,12 +59,12 @@ while True:
     output_image = obj_detc_ball.draw_rectangles(output_image, ball_rectangle)
     output_image = obj_detc_player_goal.draw_rectangles(output_image, player_goal_rectangle)
     output_image = obj_detc_opponent_goal.draw_rectangles(output_image, opponent_goal_rectangle)
-    output_image = detect_green_rectangle(output_image)
+    output_image = detect_rectangle(output_image)
     # ball_location, output_image = detect_ball(output_image)
 
     cv.imshow('Matches', output_image)
 
-    print('FPS {}'.format(1 / (time() - loop_time)))
+    # print('FPS {}'.format(1 / (time() - loop_time)))
     loop_time = time()
 
     if cv.waitKey(1) == ord('q'):
@@ -68,16 +73,3 @@ while True:
 
 print('Done.')
 
-# Mouse Control
-# for _ in range(5):
-#     time.sleep(10)
-#     if pyautogui.locateOnScreen('images/player.png', confidence=0.5) is not None:
-#         player_loc = pyautogui.locateOnScreen('images/player.png', confidence=0.5)
-#         player_point = pyautogui.center(player_loc)
-#         player_x, player_y = player_point
-#         pyautogui.click(player_x, player_y)
-#         pyautogui.dragRel(100, 100, duration=1)
-#         time.sleep(0.5)
-#     else:
-#         print("can't find object.")
-#         time.sleep(0.5)

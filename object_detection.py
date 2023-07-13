@@ -100,7 +100,8 @@ class ObjectDetection:
 
         return rectangles
 
-    def get_click_points(self, rectangles):
+    @staticmethod
+    def get_click_points(rectangles):
         points = []
 
         for (x, y, w, h) in rectangles:
@@ -118,7 +119,7 @@ class ObjectDetection:
 
         return target
 
-    def draw_crosshairs(self, target, points):
+    def draw_cross_hairs(self, target, points):
         for (center_x, center_y) in points:
             cv.drawMarker(target, (center_x, center_y), self.marker_color, self.marker_type,  self.marker_size, self.thickness)
 
