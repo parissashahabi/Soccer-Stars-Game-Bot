@@ -35,6 +35,8 @@ class GameAnalyzer:
         # self.player_turn_conf = (self.player_handle_image_path, 0.2, cv.TM_SQDIFF_NORMED, True)
         self.player_turn_conf = (0, 0, None, None)
         self.playground = (0, 0, 0, 0)
+        self.get_state = True
+        self.game_state = None
 
     def initialize(self):
         while True:
@@ -63,17 +65,15 @@ class GameAnalyzer:
         sc = pil_to_cv2(trimmed_sc)
 
         height, width, _ = sc.shape
-        save_element_screenshot(sc, "opponent", width // 2, 0, width // 2, height)
-        save_element_screenshot(sc, "player", 0, 0, width // 2, height)
-        # save_element_screenshot(sc, "ball", width // 2 - 25, 0, 55, height)
+        save_element_screenshot(sc, "opponent", self.playground[0] + self.playground[2] // 2, self.playground[1], self.playground[2] // 2, self.playground[3])
+        save_element_screenshot(sc, "player", self.playground[0], self.playground[1], self.playground[2] // 2, self.playground[3])
+        save_element_screenshot(sc, "ball", self.playground[0] + self.playground[2] // 2 - (self.playground[2] // 26), self.playground[1], self.playground[2] // 13, self.playground[3])
 
         compare_and_resize_images(self.player_image_path, self.opponent_image_path)
 
     def run(self):
         self.initialize()
 
-        i = 0
-        # loop_time = time()
         while True:
             sc = self.window_capture.get_screenshot()
 
@@ -86,30 +86,36 @@ class GameAnalyzer:
 
             self.player_turn_conf = (area_x, area_y, area_width, area_height)
             if is_players_turn(sc, self.player_turn_conf):
-                print(i, "It's your player's turn.")
-                i += 1
+                if self.get_state is True:
+                    self.get_state = False
+                    print("getting game state ...")
 
-            # screenshot = cv.imread('images/soccer stars.png', cv.IMREAD_UNCHANGED)
-            # cv.imshow('Computer Vision', screenshot)
+                    player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
+                    opponent_rectangles = self.obj_detc_opponent.find_objects(sc, 0.7)
+                    ball_rectangle = self.obj_detc_ball.find_objects(sc, 0.7)
+                    player_goal_rectangle = self.obj_detc_player_goal.find_objects(sc, 0.7)
+                    opponent_goal_rectangle = self.obj_detc_opponent_goal.find_objects(sc, 0.7)
 
-            player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
-            opponent_rectangles = self.obj_detc_opponent.find_objects(sc, 0.7)
-            ball_rectangle = self.obj_detc_ball.find_objects(sc, 0.5)
-            player_goal_rectangle = self.obj_detc_player_goal.find_objects(sc, 0.7)
-            opponent_goal_rectangle = self.obj_detc_opponent_goal.find_objects(sc, 0.7)
+                    players_position = ObjectDetection.get_click_points(player_rectangles)
+                    opponents_position = ObjectDetection.get_click_points(opponent_rectangles)
+                    ball_position = ObjectDetection.get_click_points(ball_rectangle)
+                    player_goal_position = player_goal_rectangle[0]
+                    opponent_goal_position = opponent_goal_rectangle[0]
+                    self.game_state = (players_position, opponents_position, ball_position, player_goal_position, opponent_goal_position, self.playground)
+                    print(self.game_state)
 
-            output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
-            output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
-            output_image = self.obj_detc_ball.draw_rectangles(output_image, ball_rectangle)
-            output_image = self.obj_detc_player_goal.draw_rectangles(output_image, player_goal_rectangle)
-            output_image = self.obj_detc_opponent_goal.draw_rectangles(output_image, opponent_goal_rectangle)
-            output_image = detect_rectangle(output_image)
-            # ball_location, output_image = detect_ball(output_image)
+                    output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
+                    output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
+                    output_image = self.obj_detc_ball.draw_rectangles(output_image, ball_rectangle)
+                    output_image = self.obj_detc_player_goal.draw_rectangles(output_image, player_goal_rectangle)
+                    output_image = self.obj_detc_opponent_goal.draw_rectangles(output_image, opponent_goal_rectangle)
+                    output_image = detect_rectangle(output_image)
+                    # ball_location, output_image = detect_ball(output_image)
+            else:
+                output_image = sc
+                self.get_state = True
 
             cv.imshow('Matches', output_image)
-
-            # print('FPS {}'.format(1 / (time() - loop_time)))
-            # loop_time = time()
 
             if cv.waitKey(1) == ord('q'):
                 cv.destroyAllWindows()
