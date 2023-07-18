@@ -14,8 +14,7 @@ def detect_text(image, output_image_path):
     cropped_image = image[height//8:height//4, width//8:width//3]
     gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    # cv2.imshow("binary", binary)
-    # cv2.waitKey(0)
+
     results = pytesseract.image_to_data(binary, output_type=pytesseract.Output.DICT)
     num_boxes = len(results['text'])
     _, i = find_longest_string(results['text'])

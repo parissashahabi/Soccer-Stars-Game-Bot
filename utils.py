@@ -3,6 +3,7 @@ import cv2 as cv
 import numpy as np
 from PIL import Image, ImageChops
 import os
+from matplotlib import pyplot as plt
 
 
 def list_window_names():
@@ -66,7 +67,7 @@ def compare_and_resize_images(image1_path, image2_path):
 
 
 def match_template(target, conf):
-    template_path, threshold, METHOD, lt = conf[0], conf[1], conf[2], conf[3],
+    template_path, threshold, METHOD, lt = conf[0], conf[1], conf[2], conf[3]
     template = cv.imread(template_path)
 
     template_height = template.shape[0]
@@ -132,3 +133,21 @@ def delete_image(image_path):
         print("Image file deleted successfully.")
     else:
         print("Image file does not exist.")
+
+
+def is_players_turn(image, conf):
+    area_x, area_y, area_width, area_height = conf[0], conf[1], conf[2], conf[3]
+    area = image[area_y:area_y+area_height, area_x:area_x+area_width]
+
+    pil_sc = cv2_to_pil(area)
+    trimmed_sc = trim(pil_sc)
+    area = pil_to_cv2(trimmed_sc)
+
+    area_gray = cv.cvtColor(area, cv.COLOR_BGR2GRAY)
+
+    hist = cv.calcHist([area_gray], [0], None, [256], [0, 256])
+
+    if hist[255] > 0:
+        return True
+    else:
+        return False

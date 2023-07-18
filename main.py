@@ -2,10 +2,10 @@ from pyautogui import *
 from time import time
 import time
 import cv2 as cv
-from rect_detection import detect_rectangle
+from rect_detection import detect_rectangle, get_rectangle
 from text_detection import detect_text
 from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
-    is_game_started, is_handle_found, delete_image
+    is_game_started, is_handle_found, delete_image, is_players_turn
 from window_capture import WindowCapture
 from object_detection import ObjectDetection
 from save_element_screenshot import save_element_screenshot
@@ -32,10 +32,11 @@ class GameAnalyzer:
         self.blue_rgb_code = (255, 178, 102)
         self.purple_rgb_code = (255, 102, 178)
         self.pink_rgb_code = (178, 102, 255)
-        self.player_turn_conf = (self.player_handle_image_path, 0.2, cv.TM_SQDIFF_NORMED, True)
+        # self.player_turn_conf = (self.player_handle_image_path, 0.2, cv.TM_SQDIFF_NORMED, True)
+        self.player_turn_conf = (0, 0, None, None)
+        self.playground = (0, 0, 0, 0)
 
     def initialize(self):
-        delete_image(self.player_handle_image_path)
         while True:
             if is_game_started():
                 break
@@ -43,6 +44,9 @@ class GameAnalyzer:
                 print("Game has not started yet.")
 
         self.window_capture = WindowCapture(self.window_name)
+        sc = self.window_capture.get_screenshot()
+        x, y, w, h = get_rectangle(sc)
+        self.playground = (x, y, w, h)
         self.init_players()
 
         self.obj_detc_player = ObjectDetection('images/player.jpg', self.method, self.green_rgb_code)
@@ -50,13 +54,6 @@ class GameAnalyzer:
         self.obj_detc_player_goal = ObjectDetection('images/player_goal.jpg', self.method, self.purple_rgb_code)
         self.obj_detc_opponent_goal = ObjectDetection('images/opponent_goal.jpg', self.method, self.blue_rgb_code)
         self.obj_detc_ball = ObjectDetection('images/ball.jpg', self.method, self.yellow_rgb_code)
-
-        while not is_handle_found(self.player_handle_image_path):
-            print("Image file does not exist.")
-            # time.sleep(1.5)
-            sc = self.window_capture.get_screenshot()
-            result = detect_text(sc, self.player_handle_image_path)
-            print("OCR Results:", result['text'])
 
     def init_players(self):
         sc = self.window_capture.get_screenshot()
@@ -81,8 +78,15 @@ class GameAnalyzer:
             sc = self.window_capture.get_screenshot()
 
             # checking whether it is our player's turn or not
-            if match_template(sc, self.player_turn_conf):
-                print(i, "Your turn.")
+            height, width, _ = sc.shape
+            area_x = self.playground[0]
+            area_y = 0
+            area_width = self.playground[2] // 3
+            area_height = height // 4
+
+            self.player_turn_conf = (area_x, area_y, area_width, area_height)
+            if is_players_turn(sc, self.player_turn_conf):
+                print(i, "It's your player's turn.")
                 i += 1
 
             # screenshot = cv.imread('images/soccer stars.png', cv.IMREAD_UNCHANGED)
