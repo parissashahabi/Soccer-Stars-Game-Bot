@@ -9,6 +9,7 @@ from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_r
 from window_capture import WindowCapture
 from object_detection import ObjectDetection
 from save_element_screenshot import save_element_screenshot
+from environment import Environment
 
 
 class GameAnalyzer:
@@ -37,6 +38,10 @@ class GameAnalyzer:
         self.playground = (0, 0, 0, 0)
         self.get_state = True
         self.game_state = None
+        self.opponent_radius = 0
+        self.player_radius = 0
+        self.ball_radius = 0
+        self.radius = 0
 
     def initialize(self):
         while True:
@@ -65,14 +70,18 @@ class GameAnalyzer:
         sc = pil_to_cv2(trimmed_sc)
 
         height, width, _ = sc.shape
-        save_element_screenshot(sc, "opponent", self.playground[0] + self.playground[2] // 2, self.playground[1], self.playground[2] // 2, self.playground[3])
-        save_element_screenshot(sc, "player", self.playground[0], self.playground[1], self.playground[2] // 2, self.playground[3])
-        save_element_screenshot(sc, "ball", self.playground[0] + self.playground[2] // 2 - (self.playground[2] // 26), self.playground[1], self.playground[2] // 13, self.playground[3])
+        self.opponent_radius = save_element_screenshot(sc, "opponent", self.playground[0] + self.playground[2] // 2, self.playground[1], self.playground[2] // 2, self.playground[3])
+        self.player_radius = save_element_screenshot(sc, "player", self.playground[0], self.playground[1], self.playground[2] // 2, self.playground[3])
+        self.ball_radius = save_element_screenshot(sc, "ball", self.playground[0] + self.playground[2] // 2 - (self.playground[2] // 26), self.playground[1], self.playground[2] // 13, self.playground[3])
+
+        self.radius = min(self.opponent_radius, self.player_radius)
 
         compare_and_resize_images(self.player_image_path, self.opponent_image_path)
 
     def run(self):
         self.initialize()
+
+        count = 0
 
         while True:
             sc = self.window_capture.get_screenshot()
@@ -88,6 +97,7 @@ class GameAnalyzer:
             if is_players_turn(sc, self.player_turn_conf):
                 if self.get_state is True:
                     self.get_state = False
+                    count += 1
                     print("getting game state ...")
 
                     player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
@@ -101,8 +111,16 @@ class GameAnalyzer:
                     ball_position = ObjectDetection.get_click_points(ball_rectangle)
                     player_goal_position = player_goal_rectangle[0]
                     opponent_goal_position = opponent_goal_rectangle[0]
-                    self.game_state = (players_position, opponents_position, ball_position, player_goal_position, opponent_goal_position, self.playground)
-                    print(self.game_state)
+
+                    ball_position = [(400, 200)]
+
+                    self.game_state = (players_position, opponents_position, tuple(ball_position), tuple(player_goal_position), tuple(opponent_goal_position), tuple(self.playground))
+
+                    env = Environment(self.game_state, self.radius)
+                    env.simulate()
+                    # e.visualize()
+                    w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
+                    Environment.capture_screenshot(env.space, w, h, f"images/env_{count}.png")
 
                     output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
                     output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
