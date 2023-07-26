@@ -151,3 +151,7 @@ def is_players_turn(image, conf):
         return True
     else:
         return False
+
+
+def calculate_k(population_size, curr_iter, N_ITER):
+    return max(2, population_size * curr_iter // N_ITER)

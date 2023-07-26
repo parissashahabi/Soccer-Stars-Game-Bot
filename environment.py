@@ -1,5 +1,3 @@
-import time
-
 import pygame
 import pymunk
 import pymunk.pygame_util
@@ -163,7 +161,7 @@ class Environment:
 
         return get_state
 
-    def visualize(self):
+    def visualize(self, player_id, degree, force):
 
         # Initialize the pygame window
         width, height = self.playground[2] + 2 * self.playground[0], self.playground[3] + 2 * self.playground[1]
@@ -178,21 +176,18 @@ class Environment:
         running = True
 
         while running:
-            for _ in self.players_shapes:
-                if self.check_player_goal_scored():
-                    break
-                if self.check_opponent_goal_scored():
-                    break
+            self.check_player_goal_scored()
+            self.check_opponent_goal_scored()
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    Environment.shoot(self.opponent_shapes[0], 0, 2000)
+                    Environment.shoot(self.players_shapes[player_id], degree, force)
                 if event.type == pygame.QUIT:
                     running = False
 
-            if self.check_objects_stopped():
-                for i in self.opponent_shapes:
-                    print(i.body.position)
+            # if self.check_objects_stopped():
+            #     for i in self.opponent_shapes:
+            #         print(i.body.position)
 
             screen.fill((0, 255, 0))
 
@@ -231,18 +226,3 @@ class Environment:
         self.create_soccer_ball()
         self.create_walls()
         self.create_teams()
-
-
-# state = ([(200, 300), (200, 200)], [(400, 200)], [(514, 373)], (58, 259, 60, 201), (917, 258, 48, 200), (92, 142, 821, 461))
-# e = Environment(state, 20)
-# e.simulate()
-# w, h = e.playground[2] + 2 * e.playground[0], e.playground[3] + 2 * e.playground[1]
-# e.visualize()
-# Environment.capture_screenshot(e.space, w, h, "images/env.png")
-
-# print(tuple(e.opponent_shapes[0].body.position))
-# Environment.shoot(e.opponent_shapes[0], 0, 2000)
-# for _ in range(500):
-#     e.space.step(1/120)
-# print(tuple(e.opponent_shapes[0].body.position))
-# print(e.check_objects_stopped())

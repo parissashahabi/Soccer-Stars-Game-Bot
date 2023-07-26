@@ -2,6 +2,8 @@ from pyautogui import *
 from time import time
 import time
 import cv2 as cv
+
+from choose_action import ChooseAction
 from rect_detection import detect_rectangle, get_rectangle
 from text_detection import detect_text
 from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
@@ -118,9 +120,12 @@ class GameAnalyzer:
 
                     env = Environment(self.game_state, self.radius)
                     env.simulate()
-                    # e.visualize()
                     w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
                     Environment.capture_screenshot(env.space, w, h, f"images/env_{count}.png")
+
+                    ca = ChooseAction(50, 80, 0.9, 0.5, 10, 10000, self.game_state, self.radius)
+                    ca.search()
+                    ca.save_action(count)
 
                     output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
                     output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
