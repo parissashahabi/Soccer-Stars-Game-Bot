@@ -10,7 +10,7 @@ class Environment:
         self.players_shapes = []
         self.opponent_shapes = []
         self.opponents_positions = game_state[1]
-        self.ball_position = game_state[2][0]
+        self.ball_position = (game_state[2][0][0] + game_state[5][0], game_state[2][0][1] + game_state[5][1])
         self.player_goal_position = game_state[3]
         self.opponent_goal_position = game_state[4]
         self.playground = game_state[5]
