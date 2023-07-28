@@ -1,5 +1,6 @@
 import random
 from environment import Environment
+from math import sqrt
 
 
 class Chromosome:
@@ -47,6 +48,16 @@ class Chromosome:
 
         self.calculate_fitness()
 
+    @staticmethod
+    def calculate_distance_to_goal(ball_position, goal_start, goal_end):
+        x, y = ball_position[0], ball_position[1]
+        x1, y1 = goal_start[0], goal_start[1]
+        x2, y2 = goal_end[0], goal_end[1]
+
+        distance = abs((y2 - y1) * x - (x2 - x1) * y + x2 * y1 - y2 * x1) / sqrt((y2 - y1)**2 + (x2 - x1)**2)
+
+        return distance
+
     def calculate_fitness(self):
         player_id, angle, force = self.action[0], self.action[1], self.action[2]
         env = Environment(self.game_state, self.radius)
@@ -56,9 +67,29 @@ class Chromosome:
             env.space.step(1 / 120)
 
         if env.check_player_goal_scored() is True:
-            self.fitness = 10
+            self.fitness = 100
         elif env.check_opponent_goal_scored() is True:
-            self.fitness = -10
+            self.fitness = -10000  # Very low value for opponent's goal
         else:
-            self.fitness = 0
+            ball_position = env.soccer_ball_shape.body.position
+            opponent_goal_start = (env.opponent_goal_position[0], env.opponent_goal_position[1])
+            opponent_goal_end = (env.opponent_goal_position[0], env.opponent_goal_position[1] - env.opponent_goal_position[3])
+
+            distance_to_goal = Chromosome.calculate_distance_to_goal(ball_position, opponent_goal_start, opponent_goal_end)
+            self.fitness = -distance_to_goal
+
+    # def calculate_fitness(self):
+    #     player_id, angle, force = self.action[0], self.action[1], self.action[2]
+    #     env = Environment(self.game_state, self.radius)
+    #     env.simulate()
+    #     Environment.shoot(env.players_shapes[player_id-1], round(angle), round(force))
+    #     for _ in range(500):
+    #         env.space.step(1 / 120)
+    #
+    #     if env.check_player_goal_scored() is True:
+    #         self.fitness = 10
+    #     elif env.check_opponent_goal_scored() is True:
+    #         self.fitness = -10
+    #     else:
+    #         self.fitness = 0
 

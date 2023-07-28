@@ -1,0 +1,8 @@
+
+# path: ../datasets/coco128  # dataset root dir
+train: ../train_data/images/train/  # train images (relative to 'path') 128 images
+val: ../train_data/images/val/  # val images (relative to 'path') 128 images
+
+# Classes
+names:
+  0: soccer_ball

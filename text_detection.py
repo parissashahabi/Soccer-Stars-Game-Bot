@@ -3,7 +3,7 @@ import time
 import cv2
 import pytesseract
 
-from utils import find_longest_string
+from util import find_longest_string
 
 pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 

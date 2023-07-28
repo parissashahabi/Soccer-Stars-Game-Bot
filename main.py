@@ -2,20 +2,21 @@ from pyautogui import *
 from time import time
 import time
 import cv2 as cv
-
+import torch
 from choose_action import ChooseAction
 from rect_detection import detect_rectangle, get_rectangle
 from text_detection import detect_text
-from utils import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
-    is_game_started, is_handle_found, delete_image, is_players_turn
+from util import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
+    is_game_started, is_handle_found, delete_image, is_players_turn, draw_soccer_ball_rectangle, get_soccer_ball_click_point, calculate_target_point, perform_drag_action
 from window_capture import WindowCapture
 from object_detection import ObjectDetection
 from save_element_screenshot import save_element_screenshot
 from environment import Environment
+from soccer_ball_detection import get_soccer_ball_position
 
 
 class GameAnalyzer:
-    def __init__(self, window_name):
+    def __init__(self, window_name, model):
         self.methods = ['cv.TM_CCOEFF', 'cv.TM_CCOEFF_NORMED', 'cv.TM_CCORR', 'cv.TM_CCORR_NORMED', 'cv.TM_SQDIFF', 'cv.TM_SQDIFF_NORMED']
         self.method = self.methods[1]
         self.window_name = window_name
@@ -27,7 +28,11 @@ class GameAnalyzer:
         self.obj_detc_opponent = None
         self.obj_detc_opponent_goal = None
         self.obj_detc_player_goal = None
-        self.obj_detc_ball = None
+        # self.obj_detc_ball = None
+        self.player_goal_rectangle = None
+        self.opponent_goal_rectangle = None
+        self.player_goal_position = None
+        self.opponent_goal_position = None
         self.red_rgb_code = (102, 102, 255)
         self.orange_rgb_code = (102, 178, 255)
         self.yellow_rgb_code = (102, 255, 255)
@@ -44,6 +49,7 @@ class GameAnalyzer:
         self.player_radius = 0
         self.ball_radius = 0
         self.radius = 0
+        self.model = model
 
     def initialize(self):
         while True:
@@ -56,13 +62,20 @@ class GameAnalyzer:
         sc = self.window_capture.get_screenshot()
         x, y, w, h = get_rectangle(sc)
         self.playground = (x, y, w, h)
+
+        self.obj_detc_player_goal = ObjectDetection('images/player_goal.jpg', self.method, self.purple_rgb_code)
+        self.obj_detc_opponent_goal = ObjectDetection('images/opponent_goal.jpg', self.method, self.blue_rgb_code)
+
+        self.player_goal_rectangle = self.obj_detc_player_goal.find_objects(sc, 0.7)
+        self.opponent_goal_rectangle = self.obj_detc_opponent_goal.find_objects(sc, 0.7)
+
+        self.player_goal_position = self.player_goal_rectangle[0]
+        self.opponent_goal_position = self.opponent_goal_rectangle[0]
+
         self.init_players()
 
         self.obj_detc_player = ObjectDetection('images/player.jpg', self.method, self.green_rgb_code)
         self.obj_detc_opponent = ObjectDetection('images/opponent.jpg', self.method, self.red_rgb_code)
-        self.obj_detc_player_goal = ObjectDetection('images/player_goal.jpg', self.method, self.purple_rgb_code)
-        self.obj_detc_opponent_goal = ObjectDetection('images/opponent_goal.jpg', self.method, self.blue_rgb_code)
-        self.obj_detc_ball = ObjectDetection('images/ball.jpg', self.method, self.yellow_rgb_code)
 
     def init_players(self):
         sc = self.window_capture.get_screenshot()
@@ -104,34 +117,39 @@ class GameAnalyzer:
 
                     player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
                     opponent_rectangles = self.obj_detc_opponent.find_objects(sc, 0.7)
-                    ball_rectangle = self.obj_detc_ball.find_objects(sc, 0.7)
-                    player_goal_rectangle = self.obj_detc_player_goal.find_objects(sc, 0.7)
-                    opponent_goal_rectangle = self.obj_detc_opponent_goal.find_objects(sc, 0.7)
+                    # ball_rectangle = self.obj_detc_ball.find_objects(sc, 0.7)
+                    ball_rectangle = get_soccer_ball_position(self.model, sc)
 
                     players_position = ObjectDetection.get_click_points(player_rectangles)
                     opponents_position = ObjectDetection.get_click_points(opponent_rectangles)
-                    ball_position = ObjectDetection.get_click_points(ball_rectangle)
-                    player_goal_position = player_goal_rectangle[0]
-                    opponent_goal_position = opponent_goal_rectangle[0]
+                    # ball_position = ObjectDetection.get_click_points(ball_rectangle)
+                    ball_position = get_soccer_ball_click_point(ball_rectangle)
 
-                    ball_position = [(400, 200)]
+                    self.game_state = (players_position, opponents_position, ball_position, tuple(self.player_goal_position), tuple(self.opponent_goal_position), tuple(self.playground))
 
-                    self.game_state = (players_position, opponents_position, tuple(ball_position), tuple(player_goal_position), tuple(opponent_goal_position), tuple(self.playground))
-
+                    # Setup Environment
                     env = Environment(self.game_state, self.radius)
                     env.simulate()
                     w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
                     Environment.capture_screenshot(env.space, w, h, f"images/env_{count}.png")
 
-                    ca = ChooseAction(50, 80, 0.9, 0.5, 90, 20000, self.game_state, self.radius)
+                    # Choose Best Action
+                    ca = ChooseAction(45, 80, 0.9, 0.5, 90, 10000, self.game_state, self.radius)
                     ca.search()
                     ca.save_action(count)
 
+                    # Perform Action
+                    player_id, angle, force = ca.best_action.action
+                    start_x, start_y = players_position[player_id - 1]
+                    target_x, target_y = calculate_target_point(start_x, start_y, angle, -force/100)
+                    perform_drag_action(start_x, start_y, target_x, target_y)
+
                     output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
                     output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
-                    output_image = self.obj_detc_ball.draw_rectangles(output_image, ball_rectangle)
-                    output_image = self.obj_detc_player_goal.draw_rectangles(output_image, player_goal_rectangle)
-                    output_image = self.obj_detc_opponent_goal.draw_rectangles(output_image, opponent_goal_rectangle)
+                    # output_image = self.obj_detc_ball.draw_rectangles(output_image, ball_rectangle)
+                    output_image = draw_soccer_ball_rectangle(output_image, ball_rectangle, self.yellow_rgb_code)
+                    output_image = self.obj_detc_player_goal.draw_rectangles(output_image, self.player_goal_rectangle)
+                    output_image = self.obj_detc_opponent_goal.draw_rectangles(output_image, self.opponent_goal_rectangle)
                     output_image = detect_rectangle(output_image)
                     # ball_location, output_image = detect_ball(output_image)
             else:
@@ -148,5 +166,7 @@ class GameAnalyzer:
 
 
 # list_window_names()
-game = GameAnalyzer("BlueStacks App Player")
+MODEL = torch.hub.load('yolov5', 'custom', path='YOLO Model/soccer_ball/best.pt', source='local')
+
+game = GameAnalyzer("BlueStacks App Player", MODEL)
 game.run()

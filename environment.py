@@ -10,19 +10,20 @@ class Environment:
         self.players_shapes = []
         self.opponent_shapes = []
         self.opponents_positions = game_state[1]
-        self.ball_position = (game_state[2][0][0] + game_state[5][0], game_state[2][0][1] + game_state[5][1])
+        self.ball_position = game_state[2]
         self.player_goal_position = game_state[3]
         self.opponent_goal_position = game_state[4]
         self.playground = game_state[5]
         self.space = None
         self.static_body = None
         self.walls_elasticity = 0.8
-        self.walls_thickness = 5
+        self.walls_thickness = 4
         self.max_force = 1600
         self.radius = radius
         self.soccer_ball_shape = None
         self.player_goal_criteria = self.opponent_goal_position[0]
         self.opponent_goal_criteria = self.player_goal_position[0] + self.player_goal_position[2]
+        self.ball_position_history = []
 
     def initialize_space(self):
         self.space = pymunk.Space()
@@ -128,11 +129,26 @@ class Environment:
         y_impulse = math.sin(math.radians(angle))
         player_shape.body.apply_impulse_at_local_point((force * x_impulse, force * -y_impulse), (0, 0))
 
-    def check_player_goal_scored(self):
-        object_x, object_y = self.soccer_ball_shape.body.position
+    # def check_player_goal_scored(self, offset=10):
+    #     object_x, object_y = self.soccer_ball_shape.body.position
+    #
+    #     # Check if the ball's position is within the gate coordinates
+    #     if object_x > self.player_goal_criteria + offset:
+    #         print("Player GOAL!!")
+    #         return True
+    #
+    #     return False
 
-        # Check if the ball's position is within the gate coordinates
-        if object_x >= self.player_goal_criteria:
+    def check_player_goal_scored(self):
+        ball_x, ball_y = self.soccer_ball_shape.body.position
+
+        # Get the player goal area coordinates
+        player_goal_x_start, player_goal_y_start, player_goal_width, player_goal_height = self.opponent_goal_position
+        player_goal_x_end = player_goal_x_start + player_goal_width
+        player_goal_y_end = player_goal_y_start + player_goal_height
+
+        # Check if the ball's position is within the player's goal area
+        if player_goal_x_start <= ball_x <= player_goal_x_end and player_goal_y_start <= ball_y <= player_goal_y_end:
             print("Player GOAL!!")
             return True
 

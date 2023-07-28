@@ -1,6 +1,6 @@
 from chromosome import Chromosome
 import random
-from utils import calculate_k
+from util import calculate_k
 
 
 class EvolutionaryAlgorithm:

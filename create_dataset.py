@@ -5,7 +5,7 @@ from window_capture import WindowCapture
 
 
 window_capture = WindowCapture("BlueStacks App Player")
-count = 0
+count = 1000
 
 while True:
     sc = window_capture.get_screenshot()

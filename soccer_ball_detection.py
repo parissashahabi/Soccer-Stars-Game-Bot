@@ -1,27 +1,30 @@
 import torch
 from PIL import Image
 
-# Load the YOLOv5 model
-model = torch.hub.load('YOLO Model/yolov5', 'custom', path='YOLO Model/best.pt', source='local')
 
-# Load the input image
-img_path = 'images/soccer stars 2.png'
-img = Image.open(img_path)
+def get_soccer_ball_position(model, img):
 
-# Perform object detection on the input image
-results = model(img)
+    results = model(img)
+    results_data = results.pandas().xyxy[0]
 
-# Get the bounding box coordinates (positions) and confidence scores
-results_data = results.pandas().xyxy[0]
+    highest_confidence = 0
+    ball_position = None
 
-# Iterate through the results to get the positions of each detected object
-for index, row in results_data.iterrows():
-    label = row['name']  # Object label (e.g., 'player', 'ball', etc.)
-    x_min, y_min, x_max, y_max = row['xmin'], row['ymin'], row['xmax'], row['ymax']
-    confidence = row['confidence']  # Confidence score of the detection
+    for index, row in results_data.iterrows():
+        label = row['name']  # Object label (e.g., 'player', 'ball', etc.)
+        x_min, y_min, x_max, y_max = row['xmin'], row['ymin'], row['xmax'], row['ymax']
+        confidence = row['confidence']
+        print(f"Object: {label}, Position: ({x_min}, {y_min}), ({x_max}, {y_max}), Confidence: {confidence}")
 
-    # Do something with the position information (e.g., print or use it in your game simulation)
-    print(f"Object: {label}, Position: ({x_min}, {y_min}), ({x_max}, {y_max}), Confidence: {confidence}")
+        if label == 'soccer_ball' and confidence > highest_confidence:
+            highest_confidence = confidence
+            ball_position = (x_min, y_min, x_max, y_max)
 
-# Show the annotated image with bounding boxes
-results.show()
+    # results.show()
+    return ball_position
+
+
+# model = torch.hub.load('yolov5', 'custom', path='YOLO Model/best.pt', source='local')
+# img = "images/soccer stars.png"
+# img = Image.open(img)
+# get_soccer_ball_position(model, img)

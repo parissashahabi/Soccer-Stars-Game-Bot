@@ -5,7 +5,7 @@ import numpy as np
 def save_element_screenshot(image, output_image_image, x, y, width, height):
 
     cropped_image = image[y:y + height, x:x + width]
-    cv2.imwrite(f'images/cropped_image_{output_image_image}.png', cropped_image)
+    # cv2.imwrite(f'images/cropped_image_{output_image_image}.png', cropped_image)
 
     gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
 
