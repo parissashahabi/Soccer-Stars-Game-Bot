@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import imutils
 
 # target = cv.imread('images/soccer stars.png', cv.IMREAD_UNCHANGED)
 # template = cv.imread('images/player.png', cv.IMREAD_UNCHANGED)
@@ -98,6 +99,37 @@ class ObjectDetection:
             print('Warning: too many results, raise the threshold.')
             rectangles = rectangles[:max_results]
 
+        return rectangles
+
+    def find_objects_rotate(self, target, threshold=0.7, max_results=10):
+        rectangles = []
+        for degrees in range(0, 360, 10):
+            template = imutils.rotate_bound(self.template, degrees)
+
+            result = cv.matchTemplate(target, template, self.method)
+
+            locations = np.where(result >= threshold)
+            locations = list(zip(*locations[::-1]))
+            # if not locations:
+            #     return np.array([], np.int32).reshape(0, 4)
+
+            rects = []
+            for loc in locations:
+                rect = [int(loc[0]), int(loc[1]), self.template_width, self.template_height]
+                rects.append(rect)
+                rects.append(rect)
+
+            rects, weights = cv.groupRectangles(rects, self.group_threshold, self.eps)
+            if len(rects) > max_results:
+                print('Warning: too many results, raise the threshold.')
+                rects = rects[:max_results]
+
+            for rect in rects:
+                rectangles.append(rect)
+                rectangles.append(rect)
+
+        rectangles, weights = cv.groupRectangles(rectangles, self.group_threshold, self.eps)
+        # print("rectangles", rectangles)
         return rectangles
 
     @staticmethod

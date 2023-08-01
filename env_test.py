@@ -1,6 +1,6 @@
 from environment import Environment
 import time
-for i in range(13):
+for i in range(1):
     with open(f'action reports/action_report{i+1}.txt', 'r') as file:
         lines = file.readlines()
 
