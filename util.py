@@ -204,3 +204,13 @@ def perform_drag_action(start_x, start_y, target_x, target_y, duration=0.5):
 
     # Step 4: Release the mouse button
     pyautogui.mouseUp()
+
+
+def get_environment_parameters(count):
+    with open(f'simulation/simulation_report_{count}.txt', 'r') as file:
+        lines = file.readlines()
+
+    parameters_str = lines[4].split(": ")[1].strip().replace('[', '').replace(']', '')
+    parameters = list(map(float, parameters_str.split(", ")))
+
+    return parameters

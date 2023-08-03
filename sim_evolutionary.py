@@ -1,10 +1,10 @@
-from chromosome import Chromosome
+from sim_chromosome import Chromosome
 import random
 from util import calculate_k
 
 
 class EvolutionaryAlgorithm:
-    def __init__(self, n_iter, mut_prob, recomb_prob, population_size, min_force, max_force, game_state, parameters):
+    def __init__(self, n_iter, mut_prob, recomb_prob, population_size, game_state, next_game_state):
         self.n_iter = n_iter
         self.mut_prob = mut_prob
         self.recomb_prob = recomb_prob
@@ -13,15 +13,13 @@ class EvolutionaryAlgorithm:
         self.current_iter = 0
         self.fitness_avg = 0
         self.fitness_history = []
-        self.max_force = max_force
-        self.min_force = min_force
         self.game_state = game_state
-        self.parameters = parameters
+        self.next_game_state = next_game_state
 
     # Random initialization
     def init_population(self):
         for _ in range(self.population_size):
-            young_pop = Chromosome(self.mut_prob, self.recomb_prob, self.min_force, self.max_force, self.game_state, self.parameters, True)
+            young_pop = Chromosome(self.mut_prob, self.recomb_prob, self.game_state, self.next_game_state, True)
             self.population.append(young_pop)
 
     # Fitness Tournament selection
@@ -46,16 +44,16 @@ class EvolutionaryAlgorithm:
         youngs = []
         for _ in range(self.population_size // 2):
             parents = random.choices(mating_pool, k=2)
-            young_1 = Chromosome(self.mut_prob, self.recomb_prob, self.min_force, self.max_force, self.game_state, self.parameters, False)
-            young_2 = Chromosome(self.mut_prob, self.recomb_prob, self.min_force, self.max_force, self.game_state, self.parameters, False)
+            young_1 = Chromosome(self.mut_prob, self.recomb_prob, self.game_state, self.next_game_state, False)
+            young_2 = Chromosome(self.mut_prob, self.recomb_prob, self.game_state, self.next_game_state, False)
             prob = random.uniform(0, 1)
             if prob <= self.recomb_prob:
-                crossover_point = random.randint(1, 2)
-                young_1.action = parents[0].action[:crossover_point].copy() + parents[1].action[crossover_point:].copy()
-                young_2.action = parents[1].action[:crossover_point].copy() + parents[0].action[crossover_point:].copy()
+                crossover_point = random.randint(1, 11)
+                young_1.parameters = parents[0].parameters[:crossover_point].copy() + parents[1].parameters[crossover_point:].copy()
+                young_2.parameters = parents[1].parameters[:crossover_point].copy() + parents[0].parameters[crossover_point:].copy()
             else:
-                young_1.action = parents[0].action.copy()
-                young_2.action = parents[1].action.copy()
+                young_1.parameters = parents[0].parameters.copy()
+                young_2.parameters = parents[1].parameters.copy()
 
             youngs.append(young_1)
             youngs.append(young_2)
@@ -95,7 +93,7 @@ class EvolutionaryAlgorithm:
             best_current = sorted(self.population, key=lambda agent: agent.fitness, reverse=True)[0]
             print(f"current iteration: {self.current_iter} / {self.n_iter}",
                   f", best fitness: {best_current.fitness}")
-            print(f'Action: {best_current.action}')
+            print(f'Parameters: {best_current.parameters}')
             print("-------------------------------------------------------------------------------------------------")
             self.fitness_history.append(self.fitness_avg)
 

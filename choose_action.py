@@ -4,7 +4,7 @@ import sys
 
 
 class ChooseAction:
-    def __init__(self, N_iter, population_size, mut_prob, recomb_prob, min_force, max_force, game_state, radius):
+    def __init__(self, N_iter, population_size, mut_prob, recomb_prob, min_force, max_force, game_state, parameters):
         self.N_iter = N_iter  # 50
         self.population_size = population_size  # 50
         self.mut_prob = mut_prob  # 0.9
@@ -12,19 +12,19 @@ class ChooseAction:
         self.min_force = min_force  # 10
         self.max_force = max_force  # 10000
         self.game_state = game_state
-        self.radius = radius
+        self.parameters = parameters
         self.history = None
         self.best_action = None
 
     def search(self):
         ea = EvolutionaryAlgorithm(self.N_iter, self.mut_prob, self.recomb_prob, self.population_size, self.min_force,
-                                   self.max_force, self.game_state, self.radius)
+                                   self.max_force, self.game_state, self.parameters)
         self.best_action, self.history = ea.run()
         np.savetxt("history.csv", self.history, delimiter=",")
 
     def save_action(self, count):
         original_stdout = sys.stdout
-        with open(f'action reports/action_report{count}.txt', 'w') as f:
+        with open(f'action reports/action_report_{count}.txt', 'w') as f:
             sys.stdout = f
             print(f"Game State: {self.game_state}")
             print(f"Fitness: {self.best_action.fitness}")

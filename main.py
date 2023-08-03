@@ -3,9 +3,10 @@ from time import time
 import time
 import cv2 as cv
 import torch
+
+import util
 from choose_action import ChooseAction
 from rect_detection import detect_rectangle, get_rectangle
-from text_detection import detect_text
 from util import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
     is_game_started, is_handle_found, delete_image, is_players_turn, draw_soccer_ball_rectangle, get_soccer_ball_click_point, calculate_target_point, perform_drag_action
 from window_capture import WindowCapture
@@ -50,6 +51,7 @@ class GameAnalyzer:
         self.ball_radius = 0
         self.radius = 0
         self.model = model
+        self.parameters = None
 
     def initialize(self):
         while True:
@@ -76,6 +78,8 @@ class GameAnalyzer:
 
         self.obj_detc_player = ObjectDetection('images/player.jpg', self.method, self.green_rgb_code)
         self.obj_detc_opponent = ObjectDetection('images/opponent.jpg', self.method, self.red_rgb_code)
+
+        self.parameters = util.get_environment_parameters(3)
 
     def init_players(self):
         sc = self.window_capture.get_screenshot()
@@ -115,9 +119,8 @@ class GameAnalyzer:
                     count += 1
                     print("getting game state ...")
 
-                    player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
-                    opponent_rectangles = self.obj_detc_opponent.find_objects(sc, 0.7)
-                    # ball_rectangle = self.obj_detc_ball.find_objects(sc, 0.7)
+                    player_rectangles = self.obj_detc_player.find_objects_rotate(sc, 0.7)
+                    opponent_rectangles = self.obj_detc_opponent.find_objects_rotate(sc, 0.7)
                     ball_rectangle = get_soccer_ball_position(self.model, sc)
 
                     players_position = ObjectDetection.get_click_points(player_rectangles)
@@ -127,21 +130,23 @@ class GameAnalyzer:
 
                     self.game_state = (players_position, opponents_position, ball_position, tuple(self.player_goal_position), tuple(self.opponent_goal_position), tuple(self.playground))
 
+                    player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force, _, _ = self.parameters
+
                     # Setup Environment
-                    env = Environment(self.game_state, self.radius)
+                    env = Environment(self.game_state, player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force)
                     env.simulate()
-                    w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
-                    Environment.capture_screenshot(env.space, w, h, f"images/env_{count}.png")
+                    # w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
+                    Environment.capture_screenshot(env.space, width, height, f"images/env_{count}.png")
 
                     # Choose Best Action
-                    ca = ChooseAction(45, 80, 0.9, 0.5, 90, 10000, self.game_state, self.radius)
+                    ca = ChooseAction(50, 50, 0.9, 0.5, 10, 10000, self.game_state, self.parameters)
                     ca.search()
                     ca.save_action(count)
 
                     # Perform Action
                     player_id, angle, force = ca.best_action.action
                     start_x, start_y = players_position[player_id - 1]
-                    target_x, target_y = calculate_target_point(start_x, start_y, angle, -force/100)
+                    target_x, target_y = calculate_target_point(start_x, start_y, angle, -force/60)
                     perform_drag_action(start_x, start_y, target_x, target_y)
 
                     output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)

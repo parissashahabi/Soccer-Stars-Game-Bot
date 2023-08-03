@@ -1,7 +1,9 @@
+import util
 from environment import Environment
 import time
-for i in range(1):
-    with open(f'action reports/action_report{i+1}.txt', 'r') as file:
+
+for i in range(10):
+    with open(f'action reports/action_report_{i+1}.txt', 'r') as file:
         lines = file.readlines()
 
     state_str = lines[0].split(': ')[1].strip()
@@ -12,9 +14,11 @@ for i in range(1):
     angle = float(lines[3].split(': ')[1].strip())
     force = float(lines[4].split(': ')[1].strip())
 
+    player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force, _, _ = util.get_environment_parameters(3)
+
     start_time = time.time()
 
-    e = Environment(state, 20)
+    e = Environment(state, player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force)
     e.simulate()
     e.visualize(player_id, angle, force)
     # w, h = e.playground[2] + 2 * e.playground[0], e.playground[3] + 2 * e.playground[1]

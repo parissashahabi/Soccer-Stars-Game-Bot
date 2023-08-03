@@ -4,7 +4,7 @@ from math import sqrt
 
 
 class Chromosome:
-    def __init__(self, mut_prob, recomb_prob, min_force, max_force, game_state, radius, calc_fitness):
+    def __init__(self, mut_prob, recomb_prob, min_force, max_force, game_state, parameters, calc_fitness):
         self.action = []  # [player_id, angle, force]
         self.mut_prob = mut_prob
         self.recomb_prob = recomb_prob
@@ -13,7 +13,7 @@ class Chromosome:
         self.min_force = min_force
         self.game_state = game_state
         self.calc_fitness = calc_fitness
-        self.radius = radius
+        self.parameters = parameters
 
         self.init_chromosome()
 
@@ -60,7 +60,8 @@ class Chromosome:
 
     def calculate_fitness(self):
         player_id, angle, force = self.action[0], self.action[1], self.action[2]
-        env = Environment(self.game_state, self.radius)
+        player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force, _, _ = self.parameters
+        env = Environment(self.game_state, player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force)
         env.simulate()
         Environment.shoot(env.players_shapes[player_id-1], round(angle), round(force))
         for _ in range(500):
@@ -77,19 +78,3 @@ class Chromosome:
 
             distance_to_goal = Chromosome.calculate_distance_to_goal(ball_position, opponent_goal_start, opponent_goal_end)
             self.fitness = -distance_to_goal
-
-    # def calculate_fitness(self):
-    #     player_id, angle, force = self.action[0], self.action[1], self.action[2]
-    #     env = Environment(self.game_state, self.radius)
-    #     env.simulate()
-    #     Environment.shoot(env.players_shapes[player_id-1], round(angle), round(force))
-    #     for _ in range(500):
-    #         env.space.step(1 / 120)
-    #
-    #     if env.check_player_goal_scored() is True:
-    #         self.fitness = 10
-    #     elif env.check_opponent_goal_scored() is True:
-    #         self.fitness = -10
-    #     else:
-    #         self.fitness = 0
-

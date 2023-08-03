@@ -5,7 +5,7 @@ import math
 
 
 class Environment:
-    def __init__(self, game_state, radius):
+    def __init__(self, game_state, player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force):
         self.players_positions = game_state[0]
         self.players_shapes = []
         self.opponent_shapes = []
@@ -16,14 +16,22 @@ class Environment:
         self.playground = game_state[5]
         self.space = None
         self.static_body = None
-        self.walls_elasticity = 0.8
-        self.walls_thickness = 4
-        self.max_force = 1600
-        self.radius = radius
         self.soccer_ball_shape = None
         self.player_goal_criteria = self.opponent_goal_position[0]
         self.opponent_goal_criteria = self.player_goal_position[0] + self.player_goal_position[2]
         self.ball_position_history = []
+
+        self.player_radius = player_radius
+        self.player_mass = player_mass
+        self.player_elasticity = player_elasticity
+        self.ball_radius = ball_radius
+        self.ball_mass = ball_mass
+        self.ball_elasticity = ball_elasticity
+        self.walls_thickness = walls_thickness
+        self.walls_elasticity = walls_elasticity
+        self.max_force = max_force
+        # self.force = force
+        # self.angles = angles
 
     def initialize_space(self):
         self.space = pymunk.Space()
@@ -78,13 +86,13 @@ class Environment:
             line.elasticity = self.walls_elasticity
             self.space.add(line)
 
-    def create_soccer_ball(self, radius=10, mass=10, elasticity=0.8, color=(255, 255, 255, 255)):
-        moment = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
+    def create_soccer_ball(self, color=(255, 255, 255, 255)):
+        moment = pymunk.moment_for_circle(self.ball_mass, 0, self.ball_radius, (0, 0))
 
-        soccer_ball_body = pymunk.Body(mass, moment)
-        self.soccer_ball_shape = pymunk.Circle(soccer_ball_body, radius)
+        soccer_ball_body = pymunk.Body(self.ball_mass, moment)
+        self.soccer_ball_shape = pymunk.Circle(soccer_ball_body, self.ball_radius)
 
-        self.soccer_ball_shape.elasticity = elasticity
+        self.soccer_ball_shape.elasticity = self.ball_elasticity
         soccer_ball_body.position = self.ball_position
         self.soccer_ball_shape.color = color
 
@@ -96,13 +104,13 @@ class Environment:
 
         return self.soccer_ball_shape
 
-    def create_soccer_players(self, player_position, color, mass=20, elasticity=0.8):
-        moment = pymunk.moment_for_circle(mass, 0, self.radius, (0, 0))
+    def create_soccer_players(self, player_position, color):
+        moment = pymunk.moment_for_circle(self.player_mass, 0, self.player_radius, (0, 0))
 
-        soccer_player_body = pymunk.Body(mass, moment)
-        soccer_player_shape = pymunk.Circle(soccer_player_body, self.radius)
+        soccer_player_body = pymunk.Body(self.player_mass, moment)
+        soccer_player_shape = pymunk.Circle(soccer_player_body, self.player_radius)
 
-        soccer_player_shape.elasticity = elasticity
+        soccer_player_shape.elasticity = self.player_elasticity
         soccer_player_body.position = player_position
         soccer_player_shape.color = color
 
@@ -177,10 +185,11 @@ class Environment:
 
         return get_state
 
-    def visualize(self, player_id, degree, force):
+    def visualize(self, player_id, degree, force, background_color=(0, 255, 0)):
 
         # Initialize the pygame window
-        width, height = self.playground[2] + 2 * self.playground[0], self.playground[3] + 2 * self.playground[1]
+        # width, height = self.playground[2] + 2 * self.playground[0], self.playground[3] + 2 * self.playground[1]
+        width, height = 1071, 621
         FPS = 120
         pygame.init()
         screen = pygame.display.set_mode((width, height))
@@ -205,7 +214,7 @@ class Environment:
             #     for i in self.opponent_shapes:
             #         print(i.body.position)
 
-            screen.fill((0, 255, 0))
+            screen.fill(background_color)
 
             # Step the physics simulation
             dt = 1.0 / FPS
@@ -219,13 +228,13 @@ class Environment:
         pygame.quit()
 
     @staticmethod
-    def capture_screenshot(space, width, height, file_name):
+    def capture_screenshot(space, width, height, file_name, background_color=(0, 255, 0)):
         # Create a surface to capture the screenshot
         screen_surface = pygame.Surface((width, height))
 
         # Set up the draw options
         draw_options = pymunk.pygame_util.DrawOptions(screen_surface)
-        screen_surface.fill((0, 255, 0))
+        screen_surface.fill(background_color)
 
         # Step the physics simulation
         dt = 1.0 / 120
