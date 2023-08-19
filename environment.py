@@ -251,3 +251,25 @@ class Environment:
         self.create_soccer_ball()
         self.create_walls()
         self.create_teams()
+
+    def find_closest_shape(self, point_a):
+        closest_shape = None
+        min_distance = float('inf')
+
+        for shape in self.players_shapes:
+            shape_position = shape.body.position
+            print(f"shape_position: {shape_position}, tail: {point_a}")
+            distance = Environment.calculate_distance(shape_position, point_a)
+
+            if distance < min_distance:
+                min_distance = distance
+                closest_shape = shape
+
+        # closest_shape.color = (102, 255, 255)
+
+        return closest_shape
+
+    @staticmethod
+    def calculate_distance(point1, point2):
+        # Calculate the Euclidean distance between two points
+        return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5

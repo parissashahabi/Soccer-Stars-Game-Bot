@@ -5,6 +5,7 @@ import cv2 as cv
 import torch
 
 import util
+from angle_detection import get_arrow_angle
 from choose_action import ChooseAction
 from rect_detection import detect_rectangle, get_rectangle
 from util import list_window_names, cv2_to_pil, pil_to_cv2, trim, compare_and_resize_images, match_template, \
@@ -17,7 +18,7 @@ from soccer_ball_detection import get_soccer_ball_position
 
 
 class GameAnalyzer:
-    def __init__(self, window_name, model):
+    def __init__(self, window_name, soccer_ball_model, arrow_model):
         self.methods = ['cv.TM_CCOEFF', 'cv.TM_CCOEFF_NORMED', 'cv.TM_CCORR', 'cv.TM_CCORR_NORMED', 'cv.TM_SQDIFF', 'cv.TM_SQDIFF_NORMED']
         self.method = self.methods[1]
         self.window_name = window_name
@@ -50,7 +51,8 @@ class GameAnalyzer:
         self.player_radius = 0
         self.ball_radius = 0
         self.radius = 0
-        self.model = model
+        self.soccer_ball_model = soccer_ball_model
+        self.arrow_model = arrow_model
         self.parameters = None
 
     def initialize(self):
@@ -119,9 +121,9 @@ class GameAnalyzer:
                     count += 1
                     print("getting game state ...")
 
-                    player_rectangles = self.obj_detc_player.find_objects_rotate(sc, 0.7)
-                    opponent_rectangles = self.obj_detc_opponent.find_objects_rotate(sc, 0.7)
-                    ball_rectangle = get_soccer_ball_position(self.model, sc)
+                    player_rectangles = self.obj_detc_player.find_objects(sc, 0.7)
+                    opponent_rectangles = self.obj_detc_opponent.find_objects(sc, 0.7)
+                    ball_rectangle = get_soccer_ball_position(self.soccer_ball_model, sc)
 
                     players_position = ObjectDetection.get_click_points(player_rectangles)
                     opponents_position = ObjectDetection.get_click_points(opponent_rectangles)
@@ -138,16 +140,18 @@ class GameAnalyzer:
                     # w, h = env.playground[2] + 2 * env.playground[0], env.playground[3] + 2 * env.playground[1]
                     Environment.capture_screenshot(env.space, width, height, f"images/env_{count}.png")
 
-                    # Choose Best Action
-                    ca = ChooseAction(50, 50, 0.9, 0.5, 10, 10000, self.game_state, self.parameters)
-                    ca.search()
-                    ca.save_action(count)
+                    Environment.capture_screenshot(env.space, width, height, f"images/before.jpg")
 
-                    # Perform Action
-                    player_id, angle, force = ca.best_action.action
-                    start_x, start_y = players_position[player_id - 1]
-                    target_x, target_y = calculate_target_point(start_x, start_y, angle, -force/60)
-                    perform_drag_action(start_x, start_y, target_x, target_y)
+                    # # Choose Best Action
+                    # ca = ChooseAction(50, 50, 0.9, 0.5, 10, 10000, self.game_state, self.parameters)
+                    # ca.search()
+                    # ca.save_action(count)
+
+                    # # Perform Action
+                    # player_id, angle, force = ca.best_action.action
+                    # start_x, start_y = players_position[player_id - 1]
+                    # target_x, target_y = calculate_target_point(start_x, start_y, angle, -force/60)
+                    # perform_drag_action(start_x, start_y, target_x, target_y)
 
                     output_image = self.obj_detc_player.draw_rectangles(sc, player_rectangles)
                     output_image = self.obj_detc_opponent.draw_rectangles(output_image, opponent_rectangles)
@@ -157,21 +161,44 @@ class GameAnalyzer:
                     output_image = self.obj_detc_opponent_goal.draw_rectangles(output_image, self.opponent_goal_rectangle)
                     output_image = detect_rectangle(output_image)
                     # ball_location, output_image = detect_ball(output_image)
+
+                angle, length, force, tail = get_arrow_angle(self.arrow_model, cv2_to_pil(sc), count)
+                action_result_image = cv.imread(f"images/before.jpg")
+                if angle is None:
+                    print("Did not detect arrow.")
+                else:
+                    player_radius, player_mass, player_elasticity, ball_radius, ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force, _, _ = self.parameters
+                    env = Environment(self.game_state, player_radius, player_mass, player_elasticity, ball_radius,
+                                      ball_mass, ball_elasticity, walls_thickness, walls_elasticity, max_force)
+                    env.simulate()
+                    target_shape = env.find_closest_shape(tail)
+                    Environment.shoot(target_shape, angle, force)
+                    for _ in range(500):
+                        env.space.step(1 / 120)
+                    Environment.capture_screenshot(env.space, width, height, f"images/after.jpg")
+                    action_result_image = cv.imread(f"images/after.jpg")
+
+                cv.imshow("Action Result", action_result_image)
+                if cv.waitKey(1) == ord('q'):
+                    cv.destroyAllWindows()
+                    break
+
             else:
                 output_image = sc
                 self.get_state = True
 
-            cv.imshow('Matches', output_image)
+            # cv.imshow('Matches', output_image)
 
-            if cv.waitKey(1) == ord('q'):
-                cv.destroyAllWindows()
-                break
+            # if cv.waitKey(1) == ord('q'):
+            #     cv.destroyAllWindows()
+            #     break
 
         print('Done.')
 
 
 # list_window_names()
-MODEL = torch.hub.load('yolov5', 'custom', path='YOLO Model/soccer_ball/best.pt', source='local')
+SOCCER_BALL_MODEL = torch.hub.load('yolov5', 'custom', path='YOLO Model/soccer_ball/best.pt', source='local')
+ARROW_MODEL = torch.hub.load('yolov5', 'custom', path='YOLO Model/arrow/best.pt', source='local')
 
-game = GameAnalyzer("BlueStacks App Player", MODEL)
+game = GameAnalyzer("BlueStacks App Player", SOCCER_BALL_MODEL, ARROW_MODEL)
 game.run()

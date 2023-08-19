@@ -103,7 +103,7 @@ class ObjectDetection:
 
     def find_objects_rotate(self, target, threshold=0.7, max_results=10):
         rectangles = []
-        for degrees in range(0, 360, 10):
+        for degrees in range(0, 360, 15):
             template = imutils.rotate_bound(self.template, degrees)
 
             result = cv.matchTemplate(target, template, self.method)
